@@ -1,55 +1,34 @@
+from datetime import time
+from typing import Tuple, List
+
 weekdays_set = {'LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO'}
 
-class Time(object):
-    def __init__(self, time_str):
-        time_str = time_str.strip()
-        assert len(time_str) > 3, f'time_str too short, len == {len(time_str)}'
-        try:
-            hh = int(time_str[:2])
-            mm = int(time_str[-2:])
-        except ValueError:
-            raise ValueError("Invalid hour or minutes")
-        assert hh//24 == 0 and hh >= 0, f'Hour must be in range(24), got hour == {hh}'
-        assert mm//60 == 0 and mm >= 0, f'Minutes must be in range(60), got minutes == {mm}'
-
-        self.hour = hh
-        self.minutes = mm
-
-    def __add__(self, other):
-        raw_minute_sum = self.minutes + other.minutes
-        hour_sum = (self.hour + other.hour + raw_minute_sum//60)%24
-        minute_sum = raw_minute_sum%60
-        return Time(f"{hour_sum:02d}:{minute_sum:02d}")
-
-    def __sub__(self, other):
-        raw_minute_sub = self.minutes - other.minutes
-        hour_sub = (self.hour - other.hour - raw_minute_sub//60) % 24
-        minute_sub = raw_minute_sub % 60
-        return Time(f"{hour_sub:02d}:{minute_sub:02d}")
-
-    def __eq__(self, other):
-        return self.hour == other.hour and self.minutes == other.minutes
-
-    def __str__(self):
-        return f"{self.hour:02d}:{self.minutes:02d}"
-
-    def __lt__(self, other):
-        return self.hour < other.hour or (self.hour == other.hour and self.minutes < other.minutes)
-
-    def __le__(self, other):
-        return  self < other or self == other
-
-    def __int__(self):
-        return self.hour
-
-    def __float__(self):
-        return self.hour + self.minutes/60
+def str_to_time_tuple(time_str: str) -> Tuple[int, int]:
+    """
+    :param time_str: string starting in 'hh' and ending in 'mm', where h and m are ints
+    :return: int tuple (hh, mm)
+    """
+    time_str = time_str.strip()
+    assert len(time_str) > 3, f'time_str too short, len == {len(time_str)}'
+    try:
+        hh = int(time_str[:2])
+        mm = int(time_str[-2:])
+    except ValueError:
+        raise ValueError("Invalid hour or minute")
+    assert hh//24 == 0 and hh >= 0, f'Hour must be in range(24), got hour == {hh}'
+    assert mm//60 == 0 and mm >= 0, f'minute must be in range(60), got minute == {mm}'
+    
+    return hh, mm
 
 
-class Course_block(object):
-    def __init__(self, weekday, start_time, end_time):
+class CourseBlock(object):
+    """
+    A course block represents a grouping of a weekday and a time interval,
+    delimited by the start time and the end time
+    """
+    def __init__(self, weekday: str, start_time: time, end_time: time):
         for x in start_time, end_time:
-            assert isinstance(x, Time), 'Invalid start or end time'
+            assert isinstance(x, time), 'Invalid start or end time'
         assert start_time < end_time, 'Start time should be smaller than endtime'
         weekday = weekday.upper()
         assert weekday in weekdays_set, 'Invalid weekday'
@@ -57,14 +36,12 @@ class Course_block(object):
         self.start_time = start_time
         self.end_time = end_time
 
+
     def __eq__(self, other):
         return self.weekday == other.weekday and self.start_time == other.start_time and self.end_time == other.end_time
 
     def __str__(self):
-        return f"{self.weekday}\n{self.start_time} - {self.end_time}"
-
-    def time_interval(self):
-        return self.end_time - self.start_time
+        return f"{self.weekday}\n{self.start_time.isoformat(timespec='minutes')} - {self.end_time.isoformat(timespec='minutes')}"
 
     def collides_with(self, other):
         if self.weekday != other.weekday:
@@ -74,22 +51,25 @@ class Course_block(object):
 
 
 class Comission(object):
-    def __init__(self, id, *blocks):
-        assert type(id) == str, 'Invalid comission id'
-        self.id = id
+    """
+    A comission is a grouping of course blocks, with a unique identifier
+    """
+    def __init__(self, identifyer: str, *blocks: CourseBlock):
+        assert type(identifyer) == str, 'Invalid comission id'
+        self.identifyer = identifyer
         self.block_list = []
         for block in blocks:
-            assert isinstance(block, Course_block), 'Invalid course block'
+            assert isinstance(block, CourseBlock), 'Invalid course block'
             self.block_list.append(block)
 
-    def __eq__(self, other):
-        return self.id == other.id and self.block_list == other.block_list
+    def add_course_block(self, c_block: CourseBlock):
+        self.block_list.append(c_block)
 
     def __str__(self):
-        string_rep = self.id + '\n'
+        string_rep = self.identifyer + '\n'
         for block in self.block_list:
             string_rep += str(block) + '\n'
-        return string_rep
+        return f"{self.identifyer}\n" + ''.join([f"{str(block)}\n" for block in self.block_list])
 
     def collides_with(self, other):
         for sblock in self.block_list:
@@ -98,18 +78,112 @@ class Comission(object):
                     return True
         return False
 
+class Subject(object):
+    """
+    A subject has a name and a list of comissions
+    """
+    def __init__(self, name: str, *comissions: Comission):
+        self.name = name
+        self.comission_list = []
+        for comission in comissions:
+            assert isinstance(comission, Comission), 'Invalid comission'
+            self.comission_list.append(comission)
+
+    def __str__(self):
+        return f"{len(self.name)*'_'}\n{self.name}\n{len(self.name)*'_'}\n" + \
+               ''.join([f"{str(comission)}\n" for comission in self.comission_list])
+
+
+class Combination(List[Comission]):
+    """
+    A combination is simply a list of comissionissions
+    """
+    def is_valid(self):
+        for i in range(len(self)):
+            for j in range(i+1, len(self)):
+                if self[i].collides_with(self[j]):
+                    return False
+        return True
+
+    def copy(self):
+    # overrides copy to return a Combination object
+        new = Combination()
+        for el in self:
+            new.append(el)
+        return new
+    def __str__(self):
+        return '[' + ', '.join([str(comission.identifyer) for comission in self]) + ']'
+
+
+def find_combinations(subjects: List[Subject], current_combination: Combination = None, index: int = 0) -> List[Combination]:
+    if current_combination is None:
+        current_combination = Combination()
+
+    comb_list = []
+    current_subject = subjects[index]
+
+    for comission in current_subject.comission_list:
+        # add current comission to a copy of the ongoing combination
+        new_combination = current_combination.copy()
+        new_combination.append(comission)
+        if not new_combination.is_valid:
+            continue
+        if index == len(subjects) - 1: # if the recursion reached the last subject
+            if new_combination.is_valid():
+                comb_list.append(new_combination.copy())
+
+        else: # move on to the next subject
+            new_comb_list = find_combinations(subjects, new_combination, index+1)
+            if len(new_comb_list) == 0:
+                continue
+            comb_list = comb_list + new_comb_list
+
+    return comb_list
+
+
+
 
 
 def main():
-    stb1 = Time("14:00")
-    etb1 = Time("16:00")
-    block_1 = Course_block("lunes", stb1, etb1)
-    stb2 = Time("16:00")
-    etb2 = Time("17:00")
-    block_2 = Course_block("lunes", stb2, etb2)
-    print(block_1.collides_with(block_2))
+    # Algebra Lineal
+    linalg_A = Comission('LinaAlg_A')
+    linalg_A.add_course_block(CourseBlock('lunes', time(14), time(16)))
+    linalg_A.add_course_block(CourseBlock('jueves', time(14), time(16)))
+    linalg_A.add_course_block(CourseBlock('viernes', time(9), time(11)))
+
+    linalg_B = Comission('LinaAlg_B')
+    linalg_B.add_course_block(CourseBlock('lunes', time(12), time(14)))
+    linalg_B.add_course_block(CourseBlock('miercoles', time(10), time(12)))
+    linalg_B.add_course_block(CourseBlock('jueves', time(12), time(14)))
+    
+    linalg = Subject('Algebra Lineal', linalg_A, linalg_B)
+    
+    # Matematica II
+
+    mateii_A = Comission('MateII_A')
+    mateii_A.add_course_block(CourseBlock('martes', time(15), time(17)))
+    mateii_A.add_course_block(CourseBlock('miercoles', time(15), time(17)))
+    mateii_A.add_course_block(CourseBlock('viernes', time(10), time(12)))
+
+    mateii_B = Comission('MateII_B')
+    mateii_B.add_course_block(CourseBlock('lunes', time(12), time(14)))
+    mateii_B.add_course_block(CourseBlock('martes', time(13), time(15)))
+    mateii_B.add_course_block(CourseBlock('viernes', time(12), time(14)))
+
+    mateii_C = Comission('MateII_C')
+    mateii_C.add_course_block(CourseBlock('martes', time(14), time(16)))
+    mateii_C.add_course_block(CourseBlock('miercoles', time(12), time(14)))
+    mateii_C.add_course_block(CourseBlock('viernes', time(14), time(16)))
+
+    mateii = Subject('Matematica II', mateii_A, mateii_B, mateii_C)
+
+    # combine
+    subjects = [linalg, mateii]
+    combinations = find_combinations(subjects)
+    for comb in combinations:
+        print(comb)
+
 
 
 if __name__ == '__main__':
     main()
-
