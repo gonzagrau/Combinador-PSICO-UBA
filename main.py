@@ -115,27 +115,28 @@ class Combination(List[Comission]):
         return '[' + ', '.join([str(comission.identifyer) for comission in self]) + ']'
 
 
-def find_combinations(subjects: List[Subject], current_combination: Combination = None, index: int = 0) -> List[Combination]:
+def find_combinations(subjects: List[Subject], current_combination=None, index: int = 0) -> List[Combination]:
+    """
+    :param subjects: list of Subject objects
+    :param current_combination: Combination object (defaults to newly created Combination object)
+    :param index: index to the current subject at the subjects list
+    :return: comb_list, a list of all possible combinations
+    """
     if current_combination is None:
         current_combination = Combination()
-
     comb_list = []
     current_subject = subjects[index]
 
     for comission in current_subject.comission_list:
-        # add current comission to a copy of the ongoing combination
+        # append to a copy of the ongoing combination in case the current comission collides with it
         new_combination = current_combination.copy()
         new_combination.append(comission)
-        if not new_combination.is_valid:
+        if not new_combination.is_valid():
             continue
-        if index == len(subjects) - 1: # if the recursion reached the last subject
-            if new_combination.is_valid():
-                comb_list.append(new_combination.copy())
-
+        if index == len(subjects) - 1: # if the recursion reached the last subject, save the combination
+            comb_list.append(new_combination)
         else: # move on to the next subject
             new_comb_list = find_combinations(subjects, new_combination, index+1)
-            if len(new_comb_list) == 0:
-                continue
             comb_list = comb_list + new_comb_list
 
     return comb_list
