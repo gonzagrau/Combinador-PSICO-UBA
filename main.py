@@ -142,49 +142,73 @@ def find_combinations(subjects: List[Subject], current_combination=None, index: 
     return comb_list
 
 
-
-
-
-def main():
+def test_combiner():
     # Algebra Lineal
-    linalg_A = Comission('LinaAlg_A')
+    linalg_A = Comission('A')
     linalg_A.add_course_block(CourseBlock('lunes', time(14), time(16)))
     linalg_A.add_course_block(CourseBlock('jueves', time(14), time(16)))
     linalg_A.add_course_block(CourseBlock('viernes', time(9), time(11)))
 
-    linalg_B = Comission('LinaAlg_B')
+    linalg_B = Comission('B')
     linalg_B.add_course_block(CourseBlock('lunes', time(12), time(14)))
     linalg_B.add_course_block(CourseBlock('miercoles', time(10), time(12)))
     linalg_B.add_course_block(CourseBlock('jueves', time(12), time(14)))
-    
-    linalg = Subject('Algebra Lineal', linalg_A, linalg_B)
-    
+
+    linalg_C = Comission('C')
+    linalg_C.add_course_block(CourseBlock('lunes', time(8), time(10)))
+    linalg_C.add_course_block(CourseBlock('jueves', time(11), time(13)))
+    linalg_C.add_course_block(CourseBlock('viernes', time(10), time(12)))
+
+    linalg_D = Comission('D')
+    linalg_D.add_course_block(CourseBlock('lunes', time(10), time(12)))
+    linalg_D.add_course_block(CourseBlock('miercoles', time(10), time(12)))
+    linalg_D.add_course_block(CourseBlock('jueves', time(10), time(12)))
+
+    linalg = Subject('Algebra Lineal', linalg_A, linalg_B, linalg_C, linalg_D)
+
     # Matematica II
 
-    mateii_A = Comission('MateII_A')
+    mateii_A = Comission('A')
     mateii_A.add_course_block(CourseBlock('martes', time(15), time(17)))
     mateii_A.add_course_block(CourseBlock('miercoles', time(15), time(17)))
     mateii_A.add_course_block(CourseBlock('viernes', time(10), time(12)))
 
-    mateii_B = Comission('MateII_B')
+    mateii_B = Comission('B')
     mateii_B.add_course_block(CourseBlock('lunes', time(12), time(14)))
     mateii_B.add_course_block(CourseBlock('martes', time(13), time(15)))
     mateii_B.add_course_block(CourseBlock('viernes', time(12), time(14)))
 
-    mateii_C = Comission('MateII_C')
+    mateii_C = Comission('C')
     mateii_C.add_course_block(CourseBlock('martes', time(14), time(16)))
     mateii_C.add_course_block(CourseBlock('miercoles', time(12), time(14)))
     mateii_C.add_course_block(CourseBlock('viernes', time(14), time(16)))
 
-    mateii = Subject('Matematica II', mateii_A, mateii_B, mateii_C)
+    mateii_D = Comission('D')
+    mateii_D.add_course_block(CourseBlock('lunes', time(9), time(11)))
+    mateii_D.add_course_block(CourseBlock('martes', time(12), time(14)))
+    mateii_D.add_course_block(CourseBlock('viernes', time(10), time(12)))
+
+    mateii = Subject('Matematica II', mateii_A, mateii_B, mateii_C, mateii_D)
+
+    # Analisis y Tratamiento de Imagenes
+    imag_S = Comission('S')
+    imag_S.add_course_block(CourseBlock('jueves', time(8), time(10)))
+
+    imag = Subject('Analisis y Tratamiento de Imagenes', imag_S)
+
 
     # combine
-    subjects = [linalg, mateii]
+    subjects = [linalg, mateii, imag]
     combinations = find_combinations(subjects)
-    for comb in combinations:
-        print(comb)
 
+    for combination in combinations:
+        for subject, comission in zip(subjects, combination):
+            print(f"{subject.name} - {comission.identifyer}", end='\t')
+        print()
+
+
+    print(len(combinations))
 
 
 if __name__ == '__main__':
-    main()
+    test_combiner()
