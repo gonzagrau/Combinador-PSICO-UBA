@@ -1,7 +1,7 @@
 from datetime import time
 from typing import Tuple, List
 
-weekdays_set = {'LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO'}
+weekdays_list = ['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO']
 
 def str_to_time_tuple(time_str: str) -> Tuple[int, int]:
     """
@@ -31,7 +31,7 @@ class CourseBlock(object):
             assert isinstance(x, time), 'Invalid start or end time'
         assert start_time < end_time, 'Start time should be smaller than endtime'
         weekday = weekday.upper()
-        assert weekday in weekdays_set, 'Invalid weekday'
+        assert weekday in weekdays_list, 'Invalid weekday'
         self.weekday = weekday
         self.start_time = start_time
         self.end_time = end_time
@@ -201,13 +201,14 @@ def test_combiner():
     subjects = [linalg, mateii, imag]
     combinations = find_combinations(subjects)
 
-    for combination in combinations:
-        for subject, comission in zip(subjects, combination):
-            print(f"{subject.name} - {comission.identifyer}", end='\t')
-        print()
+    # for combination in combinations:
+    #     for subject, comission in zip(subjects, combination):
+    #         print(f"{subject.name} - {comission.identifyer}", end='\t')
+    #     print()
+    #
+    # print(len(combinations))
 
-
-    print(len(combinations))
+    return subjects, combinations
 
 
 if __name__ == '__main__':
