@@ -43,8 +43,8 @@ def xlsx_to_subject(filepath: str) -> Subject:
     try:
         teo_df = pd.read_excel(filepath, sheet_name='TEO')
         teo_df = teo_df.rename(str.strip, axis = 'columns')
-        com_df = pd.read_excel(filepath, sheet_name='COM')
-        com_df = com_df.rename(str.strip, axis = 'columns')
+        prac_df = pd.read_excel(filepath, sheet_name='COM')
+        prac_df = prac_df.rename(str.strip, axis = 'columns')
     except ValueError:
         raise ValueError('Invalid .xlsx file, either TEO or COM not found')
 
@@ -55,9 +55,9 @@ def xlsx_to_subject(filepath: str) -> Subject:
         # if there are no seminaries for a given subject, sem_df is None
         sem_df = None
 
-    def parse_df(df: pd.DataFrame) -> dict:
+    def parse_course_blocks(df: pd.DataFrame) -> dict:
         """
-        Same procedure used for teo_df and sem_df, function is defined inside this
+        Same procedure used for all dataframes, function is defined inside this
         frame for ease of reading
         """
 
@@ -79,25 +79,41 @@ def xlsx_to_subject(filepath: str) -> Subject:
 
         return cb_dict
 
-    # parse theory df
-    teo_cb_dict = parse_df(teo_df)
-
-    # when possible, parse seminaries df
+    # get course blocks from dataframes
+    teo_cb_dict = parse_course_blocks(teo_df)
     if sem_df is not None:
-        sem_cb_dict = parse_df(sem_df)
+        sem_cb_dict = parse_course_blocks(sem_df)
+    else:
+        sem_cb_dict = {}
+    com_dict = parse_course_blocks(prac_df)
 
-    print('-------TEORICOS--------\n')
-    for key, val in teo_cb_dict.items():
-        print(key)
-        print(val)
-        print()
+    # build actual comissions
+    for index, row in prac_df.iterrows():
+        identifyer = row['Comisiones'].strip()
+        new_com = Comission(identifyer)
 
-    print('-------SEMINARIOS-------\n')
-    for key, val in sem_cb_dict.items():
-        print(key)
-        print(val)
-        print()
+        # add course blocks
+        if sem_df is not None:
+            teo_key, sem_key = row['Oblig.'].strip().split(' - ')
+            try:
+                sem_cb = sem_cb_dict[sem_key]
+                new_com.add_course_block(sem_cb)
+            except KeyError:
+                # sometimes, keys are swapped. this is easily fixed
+                teo_key, sem_key = sem_key, teo_key
+                sem_cb = sem_cb_dict[sem_key]
+                new_com.add_course_block(sem_cb)
+        else:
+            teo_key = row['Oblig.'].strip()
+        teo_cb = teo_cb_dict[teo_key]
+        new_com.add_course_block(teo_cb)
+        com_cb = com_dict[identifyer]
+        new_com.add_course_block(com_cb)
 
+        # add comission to subject
+        subject.append_comission(new_com)
+
+    print(subject)
     return subject
 
 
@@ -106,4 +122,4 @@ def xlsx_to_subject(filepath: str) -> Subject:
 
 
 if __name__ == '__main__':
-    sub = xlsx_to_subject('subjects/Psicopato Naperstek.xlsx')
+    sub = xlsx_to_subject('subjects/Psico Evolutiva.xlsx')

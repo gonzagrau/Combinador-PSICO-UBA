@@ -65,6 +65,7 @@ class Comission(object):
                     return True
         return False
 
+
 class Subject(object):
     """
     A subject has a name and a list of comissions
@@ -80,9 +81,8 @@ class Subject(object):
         return f"{len(self.name)*'_'}\n{self.name}\n{len(self.name)*'_'}\n" + \
                ''.join([f"{str(comission)}\n" for comission in self.comission_list])
 
-    def append_comissions(self, *comissions: Comission):
-        for comission in comissions:
-            self.comission_list.append(comission)
+    def append_comission(self, comission: Comission):
+        self.comission_list.append(comission)
 
 
 
