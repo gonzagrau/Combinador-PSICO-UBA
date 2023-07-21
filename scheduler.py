@@ -1,7 +1,5 @@
-
 import pandas as pd
-import combiner
-from datetime import time
+from combiner import *
 from typing import List
 
 
@@ -12,21 +10,21 @@ class Schedule(pd.DataFrame):
     time_series = pd.date_range(start='07:00', end='22:00', freq='30T').time
 
     def __init__(self):
-        super().__init__('', index=Schedule.time_series, columns= list(combiner.weekdays_list))
+        super().__init__('', index=Schedule.time_series, columns= list(weekdays_list))
 
-    def add_course_block(self, course_block: combiner.CourseBlock, subject_name: str) -> None:
+    def add_course_block(self, course_block: CourseBlock, subject_name: str) -> None:
         self.loc[course_block.start_time : course_block.end_time, course_block.weekday].iloc[:-1] = subject_name
 
-    def add_combination(self, subjects: List[combiner.Subject], combination: combiner.Combination) -> None:
+    def add_combination(self, subjects: List[Subject], combination: Combination) -> None:
         for subject, comission in zip(subjects, combination):
             sub_name = subject.name
             for block in comission.block_list:
                 self.add_course_block(block, sub_name)
 
 
-def save_to_excel(subjects: List[combiner.Subject], combinations: List[combiner.Combination]):
+def save_to_excel(subjects: List[Subject], combinations: List[Combination]):
     """
-    This function saves a list of combinations to a single excel file
+    This function saves a list of combinations to a single Excel file
     """
     with pd.ExcelWriter('output_excels/combinations.xlsx') as writer:
         for index, combination in enumerate(combinations):
@@ -47,7 +45,7 @@ def test_scheduler():
     will be used as an example
     """
 
-    subjects, combinations = combiner.test_combiner()
+    subjects, combinations = test_combiner()
     save_to_excel(subjects, combinations)
 
 

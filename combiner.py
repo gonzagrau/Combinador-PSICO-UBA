@@ -1,24 +1,7 @@
 from datetime import time
-from typing import Tuple, List
+from typing import List
 
 weekdays_list = ['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO']
-
-def str_to_time_tuple(time_str: str) -> Tuple[int, int]:
-    """
-    :param time_str: string starting in 'hh' and ending in 'mm', where h and m are ints
-    :return: int tuple (hh, mm)
-    """
-    time_str = time_str.strip()
-    assert len(time_str) > 3, f'time_str too short, len == {len(time_str)}'
-    try:
-        hh = int(time_str[:2])
-        mm = int(time_str[-2:])
-    except ValueError:
-        raise ValueError("Invalid hour or minute")
-    assert hh//24 == 0 and hh >= 0, f'Hour must be in range(24), got hour == {hh}'
-    assert mm//60 == 0 and mm >= 0, f'minute must be in range(60), got minute == {mm}'
-    
-    return hh, mm
 
 
 class CourseBlock(object):
@@ -26,7 +9,7 @@ class CourseBlock(object):
     A course block represents a grouping of a weekday and a time interval,
     delimited by the start time and the end time
     """
-    def __init__(self, weekday: str, start_time: time, end_time: time):
+    def __init__(self, weekday: str, start_time: time, end_time: time, teacher: str='', observation: str=''):
         for x in start_time, end_time:
             assert isinstance(x, time), 'Invalid start or end time'
         assert start_time < end_time, 'Start time should be smaller than endtime'
@@ -35,13 +18,17 @@ class CourseBlock(object):
         self.weekday = weekday
         self.start_time = start_time
         self.end_time = end_time
-
+        self.teacher = teacher
+        self.observation = observation
 
     def __eq__(self, other):
         return self.weekday == other.weekday and self.start_time == other.start_time and self.end_time == other.end_time
 
     def __str__(self):
-        return f"{self.weekday}\n{self.start_time.isoformat(timespec='minutes')} - {self.end_time.isoformat(timespec='minutes')}"
+        return f"{self.weekday}\n{self.start_time.isoformat(timespec='minutes')} - " \
+                + f"{self.end_time.isoformat(timespec='minutes')}\n" \
+                + f"Prof.: {self.teacher}\n" \
+                + f"Obser.: {self.observation}"
 
     def collides_with(self, other):
         if self.weekday != other.weekday:
@@ -54,7 +41,7 @@ class Comission(object):
     """
     A comission is a grouping of course blocks, with a unique identifier
     """
-    def __init__(self, identifyer: str, *blocks: CourseBlock):
+    def __init__(self, identifyer: str | int, *blocks: CourseBlock):
         assert type(identifyer) == str, 'Invalid comission id'
         self.identifyer = identifyer
         self.block_list = []
@@ -92,6 +79,11 @@ class Subject(object):
     def __str__(self):
         return f"{len(self.name)*'_'}\n{self.name}\n{len(self.name)*'_'}\n" + \
                ''.join([f"{str(comission)}\n" for comission in self.comission_list])
+
+    def append_comissions(self, *comissions: Comission):
+        for comission in comissions:
+            self.comission_list.append(comission)
+
 
 
 class Combination(List[Comission]):
@@ -189,6 +181,7 @@ def test_combiner():
     mateii_D.add_course_block(CourseBlock('viernes', time(10), time(12)))
 
     mateii = Subject('Matematica II', mateii_A, mateii_B, mateii_C, mateii_D)
+    print(mateii)
 
     # Analisis y Tratamiento de Imagenes
     imag_S = Comission('S')
