@@ -2,6 +2,8 @@ import pandas as pd
 from combiner import *
 from typing import Tuple
 from datetime import time
+import os
+from combiner import *
 
 
 # setup pandas display options
@@ -36,7 +38,7 @@ def xlsx_to_subject(filepath: str) -> Subject:
     """
 
     # Create subject object
-    sub_name = filepath.split('/')[-1].strip('.xlsx')
+    sub_name = os.path.basename(filepath).strip('.xlsx')
     subject = Subject(sub_name)
 
     # Get dataframes
@@ -113,13 +115,22 @@ def xlsx_to_subject(filepath: str) -> Subject:
         # add comission to subject
         subject.append_comission(new_com)
 
-    print(subject)
     return subject
 
 
+def test():
+    directory = 'subjects'
+    subjects = []
+    for filename in os.listdir(directory):
+        _, file_extension = os.path.splitext(filename)
+        f = os.path.join(directory, filename)
+        # checking if it is a file
+        if os.path.isfile(f) and file_extension == '.xlsx':
+            sub = xlsx_to_subject(f)
+            subjects.append(sub)
+            print(sub)
 
-
-
+    combinations = find_combinations(subjects)
 
 if __name__ == '__main__':
-    sub = xlsx_to_subject('subjects/Psico Evolutiva.xlsx')
+    test()

@@ -41,13 +41,14 @@ class Comission(object):
     """
     A comission is a grouping of course blocks, with a unique identifier
     """
-    def __init__(self, identifyer: str | int, *blocks: CourseBlock):
+    def __init__(self, identifyer: str | int, block_list: List[CourseBlock] = None):
         assert type(identifyer) == str, 'Invalid comission id'
         self.identifyer = identifyer
-        self.block_list = []
-        for block in blocks:
-            assert isinstance(block, CourseBlock), 'Invalid course block'
-            self.block_list.append(block)
+        if block_list is None:
+            self.block_list = []
+        else:
+            self.block_list = block_list
+        self._sel = True
 
     def add_course_block(self, c_block: CourseBlock):
         self.block_list.append(c_block)
@@ -65,17 +66,25 @@ class Comission(object):
                     return True
         return False
 
+    def select(self):
+        self._sel = True
+
+    def deselect(self):
+        self._sel = False
+
+    def is_selected(self):
+        return self._sel
 
 class Subject(object):
     """
     A subject has a name and a list of comissions
     """
-    def __init__(self, name: str, *comissions: Comission):
+    def __init__(self, name: str, comission_list: List[Comission] = None):
         self.name = name
-        self.comission_list = []
-        for comission in comissions:
-            assert isinstance(comission, Comission), 'Invalid comission'
-            self.comission_list.append(comission)
+        if comission_list is None:
+            self.comission_list = []
+        else:
+            self.comission_list = comission_list
 
     def __str__(self):
         return f"{len(self.name)*'_'}\n{self.name}\n{len(self.name)*'_'}\n" + \
@@ -84,6 +93,8 @@ class Subject(object):
     def append_comission(self, comission: Comission):
         self.comission_list.append(comission)
 
+    def get_selected_comissions(self):
+        return [com for com in self.comission_list if com.is_selected()]
 
 
 class Combination(List[Comission]):
@@ -119,7 +130,7 @@ def find_combinations(subjects: List[Subject], current_combination=None, index: 
     comb_list = []
     current_subject = subjects[index]
 
-    for comission in current_subject.comission_list:
+    for comission in current_subject.get_selected_comissions():
         # append to a copy of the ongoing combination in case the current comission collides with it
         new_combination = current_combination.copy()
         new_combination.append(comission)
@@ -156,7 +167,7 @@ def test_combiner():
     linalg_D.add_course_block(CourseBlock('miercoles', time(10), time(12)))
     linalg_D.add_course_block(CourseBlock('jueves', time(10), time(12)))
 
-    linalg = Subject('Algebra Lineal', linalg_A, linalg_B, linalg_C, linalg_D)
+    linalg = Subject('Algebra Lineal', [linalg_A, linalg_B, linalg_C, linalg_D])
 
     # Matematica II
 
@@ -180,14 +191,13 @@ def test_combiner():
     mateii_D.add_course_block(CourseBlock('martes', time(12), time(14)))
     mateii_D.add_course_block(CourseBlock('viernes', time(10), time(12)))
 
-    mateii = Subject('Matematica II', mateii_A, mateii_B, mateii_C, mateii_D)
-    print(mateii)
+    mateii = Subject('Matematica II', [mateii_A, mateii_B, mateii_C, mateii_D])
 
     # Analisis y Tratamiento de Imagenes
     imag_S = Comission('S')
     imag_S.add_course_block(CourseBlock('jueves', time(8), time(10)))
 
-    imag = Subject('Analisis y Tratamiento de Imagenes', imag_S)
+    imag = Subject('Analisis y Tratamiento de Imagenes', [imag_S])
 
 
     # combine
@@ -198,7 +208,6 @@ def test_combiner():
     #     for subject, comission in zip(subjects, combination):
     #         print(f"{subject.name} - {comission.identifyer}", end='\t')
     #     print()
-    #
     # print(len(combinations))
 
     return subjects, combinations

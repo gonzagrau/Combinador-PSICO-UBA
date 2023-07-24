@@ -1,42 +1,66 @@
 import pandas as pd
 from combiner import *
 from typing import List
+import matplotlib.colors as mcolors
+import random
 
-
-pd.set_option('display.max_columns', None)
+colors_list = list(mcolors.TABLEAU_COLORS.values())
 
 class Schedule(pd.DataFrame):
     # generate this time series only once, since it's shared by all instances
-    time_series = pd.date_range(start='07:00', end='22:00', freq='30T').time
+    time_series = pd.date_range(start='07:00', end='22:00', freq='15T').time
+
+    # generate a subject:color dictionary for formatting
+    color_dict = {'nan' : 'white'}
+    color_index = 0
 
     def __init__(self):
         super().__init__('', index=Schedule.time_series, columns= list(weekdays_list))
 
-    def add_course_block(self, course_block: CourseBlock, subject_name: str) -> None:
-        self.loc[course_block.start_time : course_block.end_time, course_block.weekday].iloc[:-1] = subject_name
+    def add_course_block(self, course_block: CourseBlock, repr_str: str) -> None:
+        self.loc[course_block.start_time : course_block.end_time, course_block.weekday].iloc[:-1] = repr_str
+        if repr_str not in self.color_dict.keys():
+            chosen_color = random.choice(colors_list)
+            colors_list.remove(chosen_color)
+            self.color_dict[repr_str] = chosen_color
 
     def add_combination(self, subjects: List[Subject], combination: Combination) -> None:
         for subject, comission in zip(subjects, combination):
             sub_name = subject.name
             for block in comission.block_list:
-                self.add_course_block(block, sub_name)
+                self.add_course_block(block, f"{sub_name} {comission.identifyer}")
+
+    def apply_format(self):
+        # format index
+        self.index = self.index.map(lambda t: t.strftime('%H:%M'))
+        # color inner cells first
+        def color_func(value):
+            return f'background-color: {self.color_dict.get(value, "white")}; border: 1px solid grey;'
+        return self.style.applymap(color_func)
+
 
 
 def save_to_excel(subjects: List[Subject], combinations: List[Combination]):
     """
     This function saves a list of combinations to a single Excel file
     """
+
     with pd.ExcelWriter('output_excels/combinations.xlsx') as writer:
         for index, combination in enumerate(combinations):
             # add the current combination to a new schedule
             df = Schedule()
             df.add_combination(subjects, combination)
 
-            # drop seconds in the index time
-            df.index = df.index.map(lambda t: t.strftime('%H:%M'))
+            # make a copy for iterability, and apply format
+            copy_df = df.copy()
+            df = df.apply_format()
 
-            # add to a new sheet
-            df.to_excel(writer, sheet_name=f"Combination {index + 1}")
+            # add to a new sheet, and auto-adjust columns width
+            df.to_excel(writer, sheet_name=f"Combination {index + 1}", engine='xlsxwriter')
+            for column in copy_df:
+                column_width = max(copy_df[column].astype(str).map(len).max(), len(column))
+                col_idx = df.columns.get_loc(column) + 1
+                writer.sheets[f"Combination {index + 1}"].set_column(col_idx, col_idx, column_width)
 
 
 def test_scheduler():
