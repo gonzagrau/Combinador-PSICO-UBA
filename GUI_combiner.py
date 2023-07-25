@@ -1,6 +1,9 @@
 import customtkinter as ctk
 from PIL import Image
 import webbrowser
+import combiner
+import scheduler
+import subject_parser
 
 # Default appearance mode
 ctk.set_appearance_mode('light')
@@ -16,7 +19,8 @@ TITLE = 'PsiComb'
 VER_STR = 'Ver. 1.0'
 LIGHT_MODE_TEXT = 'Modo dia'
 DARK_MODE_TEXT = 'Modo noche'
-COMBINER_BUTTON_TEXT = 'Combinador de horarios Psico UBA'
+COMBINER_BUTTON_TEXT = 'Combinador de horarios \n Psicología UBA'
+SUBJECT_DIR = 'subjects'
 
 # Shortcut for fast padding
 padding = dict(padx=5, pady=5)
@@ -100,6 +104,9 @@ class MainFrame(ctk.CTkFrame):
         # Combiner button
         self.button_combiner = ctk.CTkButton(master=self,
                                              text=COMBINER_BUTTON_TEXT,
+                                             fg_color=('purple', 'purple'),
+                                             text_color='white',
+                                             font=('courier', 20, 'bold'),
                                              command=self.button_combiner_action)
         self.button_combiner.grid(row=1, column=1, columnspan=1, sticky='ew')
 
@@ -150,25 +157,61 @@ class CombinerFrame(ctk.CTkFrame):
     def __init__(self, master: MainWindow, **kwargs):
         super().__init__(master, **kwargs)
         self.master = master
-        # Top Frame
-        self.topFrame = ctk.CTkFrame(master=self, fg_color='transparent')
-        self.topFrame.pack(expand=True, fill=ctk.X)
-        self.topFrame.columnconfigure(0, weight=1)
-        self.topFrame.columnconfigure(1, weight=9)
+        self.subjects = subject_parser.parse_all_subjects(SUBJECT_DIR)
+
+        # Grid congifure
+        self.rowconfigure(0, weight=1)
+        self.rowconfigure(1, weight=8)
+        self.rowconfigure(2, weight=2)
+
+        # Frame label
+        self.frame_label = ctk.CTkLabel(master=self,
+                                        text=f"{len(self.subjects)} materias encontradas",
+                                        font=('courier', 14, 'italic'))
+        self.frame_label.pack(expand=True, fill=ctk.X)
+
+        self.example_checkbox = ComissionCheckbox(self, self.subjects[1].comission_list[0])
+        self.example_checkbox.pack()
 
         # Go Back Button
-
-        self.goBack = ctk.CTkButton(self.topFrame, text='<', command=self.go_back_to_main_frame,
+        self.goBack = ctk.CTkButton(self, text='<', command=self.go_back_to_main_frame,
                                     width=15, height=15, corner_radius=15)
-        self.goBack.grid(row=0, column=1, sticky='w', padx=5, pady=5)
+        self.goBack.pack()
 
     def go_back_to_main_frame(self):
-        """
-        This method will be accessed from within the inputs frame
-        """
         self.master.current_frame = MainFrame(self.master)
 
 
+class ComissionSelectorFrame(ctk.CTkScrollableFrame):
+    def __init__(self, master, comissions, **kwargs):
+        super().__init__(master, **kwargs)
+        self.command = None
+        self.checkbox_list = []
+        for i, item in enumerate(comissions):
+            self.add_comission_chekbox(item)
+
+
+    def add_comission_chekbox(self, item):
+        checkbox = ctk.CTkCheckBox(self, text=item)
+        if self.command is not None:
+            checkbox.configure(command=self.command)
+        checkbox.grid(row=len(self.checkbox_list), column=0, pady=(0, 10))
+        self.checkbox_list.append(checkbox)
+
+
+class ComissionCheckbox(ctk.CTkCheckBox):
+    def __init__(self, master, comission: combiner.Comission, **kwargs):
+        super().__init__(master, **kwargs)
+        self.comission = comission
+        self.check_var = ctk.BooleanVar(value=True)
+        self.configure(text=str(comission),
+                       command=self.toggle_comission,
+                       variable=self.check_var)
+    def toggle_comission(self):
+        if self.check_var.get():
+            self.comission.select()
+        else:
+            self.comission.deselect()
 
 def main():
     root = MainWindow()

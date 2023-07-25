@@ -28,7 +28,7 @@ class CourseBlock(object):
         return f"{self.weekday}\n{self.start_time.isoformat(timespec='minutes')} - " \
                 + f"{self.end_time.isoformat(timespec='minutes')}\n" \
                 + f"Prof.: {self.teacher}\n" \
-                + f"Obser.: {self.observation}"
+                + f"Obser.: {self.observation}"*int(bool(len(self.observation)))
 
     def collides_with(self, other):
         if self.weekday != other.weekday:
@@ -54,10 +54,7 @@ class Comission(object):
         self.block_list.append(c_block)
 
     def __str__(self):
-        string_rep = self.identifyer + '\n'
-        for block in self.block_list:
-            string_rep += str(block) + '\n'
-        return f"{self.identifyer}\n" + ''.join([f"{str(block)}\n" for block in self.block_list])
+        return f"Comision {self.identifyer}\n" + '\n'.join([f"{str(block)}" for block in self.block_list])
 
     def collides_with(self, other):
         for sblock in self.block_list:

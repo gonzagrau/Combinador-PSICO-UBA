@@ -118,19 +118,28 @@ def xlsx_to_subject(filepath: str) -> Subject:
     return subject
 
 
-def test():
-    directory = 'subjects'
+def parse_all_subjects(directory: str) -> List[Subject]:
+    """
+    parses all subjects from a giver directory
+    """
     subjects = []
     for filename in os.listdir(directory):
         _, file_extension = os.path.splitext(filename)
         f = os.path.join(directory, filename)
-        # checking if it is a file
+        # checking if it is a valid file
         if os.path.isfile(f) and file_extension == '.xlsx':
             sub = xlsx_to_subject(f)
             subjects.append(sub)
-            print(sub)
+    return subjects
 
+
+def test():
+    subjects = parse_all_subjects('subjects')
     combinations = find_combinations(subjects)
+    for sub in subjects:
+        print(sub)
+    return  subjects, combinations
+
 
 if __name__ == '__main__':
     test()
