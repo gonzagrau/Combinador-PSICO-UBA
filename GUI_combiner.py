@@ -159,43 +159,52 @@ class CombinerFrame(ctk.CTkFrame):
         self.master = master
         self.subjects = subject_parser.parse_all_subjects(SUBJECT_DIR)
 
-        # Grid congifure
-        self.rowconfigure(0, weight=1)
-        self.rowconfigure(1, weight=8)
-        self.rowconfigure(2, weight=2)
-
         # Frame label
         self.frame_label = ctk.CTkLabel(master=self,
                                         text=f"{len(self.subjects)} materias encontradas",
                                         font=('courier', 14, 'italic'))
         self.frame_label.pack(expand=True, fill=ctk.X)
 
-        self.example_checkbox = ComissionCheckbox(self, self.subjects[1].comission_list[0])
-        self.example_checkbox.pack()
+        # Comission selector
+        self.selector_list = []
+        self.selector_frame = ctk.CTkFrame(self)
+        for subject in self.subjects:
+            self.add_selector(subject)
+        self.selector_frame.pack(expand=True, fill=ctk.BOTH)
 
         # Go Back Button
         self.goBack = ctk.CTkButton(self, text='<', command=self.go_back_to_main_frame,
                                     width=15, height=15, corner_radius=15)
-        self.goBack.pack()
+        self.goBack.pack(side=ctk.TOP)
 
     def go_back_to_main_frame(self):
         self.master.current_frame = MainFrame(self.master)
 
+    def add_selector(self, subject):
+        selector = ComissionSelectorFrame(self.selector_frame, subject)
+        selector.pack(expand=True, fill=ctk.BOTH, side=ctk.LEFT)
+        self.selector_list.append(selector)
+
 
 class ComissionSelectorFrame(ctk.CTkScrollableFrame):
-    def __init__(self, master, comissions, **kwargs):
+    def __init__(self, master, subject:combiner.Subject, **kwargs):
         super().__init__(master, **kwargs)
-        self.command = None
+        self.subject_label = ctk.CTkLabel(master=self,
+                                          text=subject.name,
+                                          font=('arial', 20, 'bold'),
+                                          fg_color='green',
+                                          text_color='white')
+        self.subject_label.grid(row=0, column=0)
+
+        # checkboxes
         self.checkbox_list = []
-        for i, item in enumerate(comissions):
-            self.add_comission_chekbox(item)
+        for comission in subject.comission_list:
+            self.add_comission_chekbox(comission)
 
 
-    def add_comission_chekbox(self, item):
-        checkbox = ctk.CTkCheckBox(self, text=item)
-        if self.command is not None:
-            checkbox.configure(command=self.command)
-        checkbox.grid(row=len(self.checkbox_list), column=0, pady=(0, 10))
+    def add_comission_chekbox(self, comission):
+        checkbox = ComissionCheckbox(self, comission)
+        checkbox.grid(row=len(self.checkbox_list)+1, column=0, pady=(0, 10))
         self.checkbox_list.append(checkbox)
 
 

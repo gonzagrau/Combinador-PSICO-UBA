@@ -27,8 +27,8 @@ class CourseBlock(object):
     def __str__(self):
         return f"{self.weekday}\n{self.start_time.isoformat(timespec='minutes')} - " \
                 + f"{self.end_time.isoformat(timespec='minutes')}\n" \
-                + f"Prof.: {self.teacher}\n" \
-                + f"Obser.: {self.observation}"*int(bool(len(self.observation)))
+                + f"Prof.: {self.teacher}" \
+                + f"\nObser.: {self.observation}"*int(bool(len(self.observation)))
 
     def collides_with(self, other):
         if self.weekday != other.weekday:
