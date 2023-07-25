@@ -8,17 +8,29 @@ from typing import List
 import openpyxl as xl
 from tkinter import ttk
 from CTkTable import CTkTable
+import subprocess, os, platform
+
+# File opening protocol
+if platform.system() == 'Darwin':       # macOS
+    launch_file = lambda filepath: subprocess.call(('open', filepath))
+elif platform.system() == 'Windows':    # Windows
+    launch_file = lambda filepath: os.startfile(filepath)
+else:                                   # linux variants
+    launch_file = lambda filepath: subprocess.call(('xdg-open', filepath))
 
 # Default appearance mode
 ctk.set_appearance_mode('light')
 
-# IMPORTANT CONSTANTS
+# IMPORTANT FILE CONSTANTS
 SUBJECT_DIR = 'subjects'
 ICON_PATH = r'./assets/images/logo.ico'
 FULL_SCREEN = False
 INITIAL_RESOLUTION_POSITION = '1200x800+5+5'
 LOGO_PATH = r'./assets/images/logo.png'
 REP_URL = r'https://github.com/gonzagrau/Combinador-PSICO-UBA'
+OUTPUT_PATH = "outputs/combinations.xlsx"
+
+# STRING CONSTANTS
 REP_TEXT = 'Ver en GitHub'
 TITLE = 'PsiComb'
 VER_STR = 'Ver. 1.0'
@@ -29,7 +41,7 @@ WELCOME_TEXT = 'Combinador de horarios \n Psicología UBA'
 COMBINE_BUTTON_TEXT = 'Calcular combinaciones'
 SEL_ALL_TEXT = 'Seleccionar todas'
 DESEL_ALL_TEXT = 'Deseleccionar todas'
-OUTPUT_PATH = 'output_excels/combinations.xlsx'
+LAUNCH_TEXT = 'Ver horarios en Excel'
 
 # Shortcut for fast padding
 padding = dict(padx=5, pady=5)
@@ -300,7 +312,8 @@ class DisplayCombFrame(ctk.CTkFrame):
 
         # grid configuration
         self.rowconfigure(0, weight=1)
-        self.rowconfigure(1, weight=9)
+        self.rowconfigure(1, weight=6)
+        self.rowconfigure(2, weight=3)
         self.columnconfigure(0, weight=1)
         self.columnconfigure(1, weight=3)
 
@@ -315,11 +328,18 @@ class DisplayCombFrame(ctk.CTkFrame):
         self.go_back_button.grid(row=0, column=0)
 
         # combinations found label
+        def found_str(l: List):
+            if not len(l):
+                return 'Ninguna combinación hallada'
+            elif len(l) == 1:
+                return '1 combinación hallada'
+            return f"{len(l)} combinaciones halladas"
+
         self.comb_found_label = ctk.CTkLabel(master=self,
-                                             text=f"{len(combinations)} combinaciones halladas",
-                                             font=('helvetica', 20, 'italic'),
+                                             text=found_str(self.combinations),
+                                             font=('helvetica', 18, 'bold'),
                                              anchor='center')
-        self.comb_found_label.grid(row=0, column=1, sticky='e')
+        self.comb_found_label.grid(row=0, column=1)
 
         # table
         table_values = [[subject.name for subject in self.subjects]]
@@ -329,6 +349,18 @@ class DisplayCombFrame(ctk.CTkFrame):
                               header_color='lightgreen',
                               values=table_values)
         self.table.grid(row=1, column=0, columnspan=2, padx=20, pady=20)
+
+        # launch excel file
+        def launch_action():
+            launch_file(os.path.abspath(OUTPUT_PATH))
+        self.launch_button = ctk.CTkButton(master=self,
+                                           text=LAUNCH_TEXT,
+                                           command=launch_action,
+                                           height=35,
+                                           font=('roboto', 25, 'bold'),
+                                           text_color=('black', 'white'),
+                                           fg_color=('lightgreen', 'darkgreen'))
+        self.launch_button.grid(row=2, column=0, columnspan=2, padx=20, pady=20)
 
 
     def go_back_to_combiner(self):
