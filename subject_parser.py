@@ -4,6 +4,7 @@ from typing import Tuple
 from datetime import time
 import os
 from combiner import *
+import re
 
 
 # setup pandas display options
@@ -76,6 +77,8 @@ def xlsx_to_subject(filepath: str) -> Subject:
             if str(observation).strip() in ['nan', ' ', '.', '-']:
                 # discard empty observations
                 observation = ''
+            else:
+                observation = '\n'.join(re.split(r'\.|\-', observation))
             new_cb = CourseBlock(weekday, start_time, end_time, teacher, observation)
             cb_dict[identifyer] = new_cb
 

@@ -4,24 +4,22 @@ from typing import List
 import matplotlib.colors as mcolors
 import random
 
-colors_list = list(mcolors.TABLEAU_COLORS.values())
-
 class Schedule(pd.DataFrame):
     # generate this time series only once, since it's shared by all instances
     time_series = pd.date_range(start='07:00', end='22:00', freq='15T').time
-
-    # generate a subject:color dictionary for formatting
-    color_dict = {'nan' : 'white'}
-    color_index = 0
-
+    color_dict = {}
+    colors_list = list(mcolors.TABLEAU_COLORS.values())
     def __init__(self):
         super().__init__('', index=Schedule.time_series, columns= list(weekdays_list))
+
 
     def add_course_block(self, course_block: CourseBlock, repr_str: str) -> None:
         self.loc[course_block.start_time : course_block.end_time, course_block.weekday].iloc[:-1] = repr_str
         if repr_str not in self.color_dict.keys():
-            chosen_color = random.choice(colors_list)
-            colors_list.remove(chosen_color)
+            if len(self.colors_list) == 0: # reset colors if we run out of them
+                self.colors_list = list(mcolors.TABLEAU_COLORS.values())
+            chosen_color = random.choice(self.colors_list)
+            self.colors_list.remove(chosen_color)
             self.color_dict[repr_str] = chosen_color
 
     def add_combination(self, subjects: List[Subject], combination: Combination) -> None:
@@ -40,12 +38,12 @@ class Schedule(pd.DataFrame):
 
 
 
-def save_to_excel(subjects: List[Subject], combinations: List[Combination]):
+def save_to_excel(subjects: List[Subject], combinations: List[Combination], filepath: str):
     """
     This function saves a list of combinations to a single Excel file
     """
 
-    with pd.ExcelWriter('output_excels/combinations.xlsx') as writer:
+    with pd.ExcelWriter(filepath) as writer:
         for index, combination in enumerate(combinations):
             # add the current combination to a new schedule
             df = Schedule()
@@ -70,7 +68,7 @@ def test_scheduler():
     """
 
     subjects, combinations = test_combiner()
-    save_to_excel(subjects, combinations)
+    save_to_excel(subjects, combinations, 'output_excels/combinations.xlsx')
 
 
 if __name__ == '__main__':

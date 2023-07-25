@@ -54,7 +54,10 @@ class Comission(object):
         self.block_list.append(c_block)
 
     def __str__(self):
-        return f"Comision {self.identifyer}\n" + '\n'.join([f"{str(block)}" for block in self.block_list])
+        return f"Comision {self.identifyer}\n" + self.blocks_str()
+
+    def blocks_str(self):
+        return '\n'.join([f"{str(block)}" for block in self.block_list])
 
     def collides_with(self, other):
         for sblock in self.block_list:

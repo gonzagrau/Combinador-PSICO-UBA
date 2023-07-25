@@ -4,11 +4,16 @@ import webbrowser
 import combiner
 import scheduler
 import subject_parser
+from typing import List
+import openpyxl as xl
+from tkinter import ttk
+from CTkTable import CTkTable
 
 # Default appearance mode
 ctk.set_appearance_mode('light')
 
 # IMPORTANT CONSTANTS
+SUBJECT_DIR = 'subjects'
 ICON_PATH = r'./assets/images/logo.ico'
 FULL_SCREEN = False
 INITIAL_RESOLUTION_POSITION = '1200x800+5+5'
@@ -19,8 +24,12 @@ TITLE = 'PsiComb'
 VER_STR = 'Ver. 1.0'
 LIGHT_MODE_TEXT = 'Modo dia'
 DARK_MODE_TEXT = 'Modo noche'
-COMBINER_BUTTON_TEXT = 'Combinador de horarios \n Psicología UBA'
-SUBJECT_DIR = 'subjects'
+CHOOSE_TEXT = 'Elija sus comisiones para cada materia'
+WELCOME_TEXT = 'Combinador de horarios \n Psicología UBA'
+COMBINE_BUTTON_TEXT = 'Calcular combinaciones'
+SEL_ALL_TEXT = 'Seleccionar todas'
+DESEL_ALL_TEXT = 'Deseleccionar todas'
+OUTPUT_PATH = 'output_excels/combinations.xlsx'
 
 # Shortcut for fast padding
 padding = dict(padx=5, pady=5)
@@ -103,7 +112,7 @@ class MainFrame(ctk.CTkFrame):
 
         # Combiner button
         self.button_combiner = ctk.CTkButton(master=self,
-                                             text=COMBINER_BUTTON_TEXT,
+                                             text=WELCOME_TEXT,
                                              fg_color=('purple', 'purple'),
                                              text_color='white',
                                              font=('courier', 20, 'bold'),
@@ -159,53 +168,112 @@ class CombinerFrame(ctk.CTkFrame):
         self.master = master
         self.subjects = subject_parser.parse_all_subjects(SUBJECT_DIR)
 
-        # Frame label
-        self.frame_label = ctk.CTkLabel(master=self,
-                                        text=f"{len(self.subjects)} materias encontradas",
-                                        font=('courier', 14, 'italic'))
-        self.frame_label.pack(expand=True, fill=ctk.X)
+        # Subjects found label
+        self.choose_label = ctk.CTkLabel(master=self,
+                                         text=CHOOSE_TEXT,
+                                         font=('helvetica', 20, 'bold'),
+                                         anchor='center',
+                                         text_color=('black', 'white'))
+        # self.frame_label.grid(row=0, column=0, sticky='ew', **padding)
+        self.choose_label.pack(fill=ctk.X, side=ctk.TOP, **padding)
 
         # Comission selector
         self.selector_list = []
         self.selector_frame = ctk.CTkFrame(self)
         for subject in self.subjects:
             self.add_selector(subject)
-        self.selector_frame.pack(expand=True, fill=ctk.BOTH)
+        self.selector_frame.pack(fill=ctk.BOTH, side=ctk.TOP, expand=True, **padding)
 
-        # Go Back Button
-        self.goBack = ctk.CTkButton(self, text='<', command=self.go_back_to_main_frame,
-                                    width=15, height=15, corner_radius=15)
-        self.goBack.pack(side=ctk.TOP)
-
-    def go_back_to_main_frame(self):
-        self.master.current_frame = MainFrame(self.master)
+        # Combine button
+        self.combine_button = ctk.CTkButton(master=self,
+                                            text=COMBINE_BUTTON_TEXT,
+                                            command=self.combine_action,
+                                            height=35,
+                                            font=('roboto', 25, 'bold'),
+                                            text_color=('black', 'white'),
+                                            fg_color=('lightgreen', 'darkgreen'))
+        self.combine_button.pack(side=ctk.TOP, pady=25)
 
     def add_selector(self, subject):
         selector = ComissionSelectorFrame(self.selector_frame, subject)
-        selector.pack(expand=True, fill=ctk.BOTH, side=ctk.LEFT)
+        selector.pack(expand=True, fill=ctk.BOTH, side=ctk.LEFT, **padding)
         self.selector_list.append(selector)
+
+    def combine_action(self):
+        combinations = combiner.find_combinations(self.subjects)
+        scheduler.save_to_excel(self.subjects, combinations, OUTPUT_PATH)
+        self.master.current_frame = DisplayCombFrame(self.master, self.subjects, combinations)
+
 
 
 class ComissionSelectorFrame(ctk.CTkScrollableFrame):
     def __init__(self, master, subject:combiner.Subject, **kwargs):
         super().__init__(master, **kwargs)
+
+        # grid configuration
+        self.columnconfigure(0, weight=1)
+        self.columnconfigure(1, weight=1)
+        self.row_counter = 0
+
+        # subject label
         self.subject_label = ctk.CTkLabel(master=self,
                                           text=subject.name,
                                           font=('arial', 20, 'bold'),
-                                          fg_color='green',
-                                          text_color='white')
-        self.subject_label.grid(row=0, column=0)
+                                          bg_color='lightblue',
+                                          text_color='black',
+                                          corner_radius=20,
+                                          anchor='center')
+        self.subject_label.grid(row=self.row_counter, column=0, columnspan=2, **padding)
+        self.row_counter += 1
+
+        # select all radio buttons
+        self.radio_var = ctk.BooleanVar(value=True)
+        self.sel_all_radio = ctk.CTkRadioButton(master=self,
+                                                text=SEL_ALL_TEXT,
+                                                variable=self.radio_var,
+                                                command=self.sel_radio_action,
+                                                value=1,
+                                                fg_color='purple')
+        self.desel_all_radio = ctk.CTkRadioButton(master=self,
+                                                  text=DESEL_ALL_TEXT,
+                                                  variable=self.radio_var,
+                                                  command=self.desel_radio_action,
+                                                  value=0,
+                                                  fg_color='purple')
+        self.sel_all_radio.grid(row=self.row_counter, column=0, **padding)
+        self.desel_all_radio.grid(row=self.row_counter, column=1, **padding)
+        self.row_counter += 1
 
         # checkboxes
         self.checkbox_list = []
+        self.comission_labels = []
         for comission in subject.comission_list:
-            self.add_comission_chekbox(comission)
+            self.add_comission_checkbox(comission)
 
+    def add_comission_checkbox(self, comission):
+        # label for each comission
+        com_label = ctk.CTkLabel(master=self,
+                                      text=f"COMISION {comission.identifyer}",
+                                      font=('helvetica', 13, 'bold'))
+        com_label.grid(row=self.row_counter, column=0, columnspan=2, pady=(0, 10), sticky='w')
+        self.row_counter += 1
+        self.comission_labels.append(com_label)
 
-    def add_comission_chekbox(self, comission):
+        # actual checkbox
         checkbox = ComissionCheckbox(self, comission)
-        checkbox.grid(row=len(self.checkbox_list)+1, column=0, pady=(0, 10))
+        checkbox.grid(row=self.row_counter, column=0, columnspan=2, pady=(0, 10), sticky='w')
+        self.row_counter += 1
         self.checkbox_list.append(checkbox)
+
+    def sel_radio_action(self):
+        for checkbox in self.checkbox_list:
+            checkbox.select()
+            checkbox.toggle_comission()
+
+    def desel_radio_action(self):
+        for checkbox in self.checkbox_list:
+            checkbox.deselect()
+            checkbox.toggle_comission()
 
 
 class ComissionCheckbox(ctk.CTkCheckBox):
@@ -213,14 +281,60 @@ class ComissionCheckbox(ctk.CTkCheckBox):
         super().__init__(master, **kwargs)
         self.comission = comission
         self.check_var = ctk.BooleanVar(value=True)
-        self.configure(text=str(comission),
+        self.configure(text=comission.blocks_str(),
                        command=self.toggle_comission,
-                       variable=self.check_var)
+                       variable=self.check_var,
+                       font=('helvetica', 12) )
     def toggle_comission(self):
         if self.check_var.get():
             self.comission.select()
         else:
             self.comission.deselect()
+
+
+class DisplayCombFrame(ctk.CTkFrame):
+    def __init__(self, master, subjects: List[combiner.Subject], combinations: List[combiner.Combination], **kwargs):
+        super().__init__(master, **kwargs)
+        self.subjects = subjects
+        self.combinations = combinations
+
+        # grid configuration
+        self.rowconfigure(0, weight=1)
+        self.rowconfigure(1, weight=9)
+        self.columnconfigure(0, weight=1)
+        self.columnconfigure(1, weight=3)
+
+        # go back button
+        self.go_back_button = ctk.CTkButton(master=self,
+                                            text='<',
+                                            command=self.go_back_to_combiner,
+                                            width=15,
+                                            height=15,
+                                            corner_radius=15,
+                                            fg_color='purple')
+        self.go_back_button.grid(row=0, column=0)
+
+        # combinations found label
+        self.comb_found_label = ctk.CTkLabel(master=self,
+                                             text=f"{len(combinations)} combinaciones halladas",
+                                             font=('helvetica', 20, 'italic'),
+                                             anchor='center')
+        self.comb_found_label.grid(row=0, column=1, sticky='e')
+
+        # table
+        table_values = [[subject.name for subject in self.subjects]]
+        for comb in self.combinations:
+            table_values.append([com.identifyer for com in comb])
+        self.table = CTkTable(master=self,
+                              header_color='lightgreen',
+                              values=table_values)
+        self.table.grid(row=1, column=0, columnspan=2, padx=20, pady=20)
+
+
+    def go_back_to_combiner(self):
+        self.master.current_frame = CombinerFrame(self.master)
+
+
 
 def main():
     root = MainWindow()
