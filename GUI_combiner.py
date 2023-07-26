@@ -25,7 +25,10 @@ ICON_PATH = r'./assets/images/logo.ico'
 FULL_SCREEN = False
 INITIAL_RESOLUTION_POSITION = '1200x800+5+5'
 LOGO_PATH = r'./assets/images/logo.png'
+PSI_ICON_PATH = r'./assets/images/psi_rojo_30x30.png'
+DEL_ICON_PATH = r'./assets/images/delete_icon.png'
 REP_URL = r'https://github.com/gonzagrau/Combinador-PSICO-UBA'
+CAMPUS_URL = r'http://academica.psi.uba.ar/index.php'
 OUTPUT_PATH = "outputs/combinations.xlsx"
 
 # STRING CONSTANTS
@@ -100,7 +103,7 @@ class MainFrame(ctk.CTkFrame):
     a version label, a dark/light mode switch, and a GitHub link button.
     """
 
-    def __init__(self, master: MainWindow, **kwargs):
+    def __init__(self, master: MainWindow, subjects: List[combiner.Subject] = None,**kwargs):
         super().__init__(master, **kwargs)
         self.master = master
 
@@ -115,7 +118,14 @@ class MainFrame(ctk.CTkFrame):
         self.columnconfigure(2, weight=1)
 
         # Inputted subjects
-        self.subjects_list = []
+        if subjects is not None:
+            self.subjects_list = subjects
+        else:
+            self.subjects_list = []
+
+        ################################################
+        # ----------------ROW 0-------------------------
+        ################################################
 
         # Logo image
         self.logo_image = ctk.CTkImage(light_image=Image.open(LOGO_PATH),
@@ -129,14 +139,18 @@ class MainFrame(ctk.CTkFrame):
                                          hover=False)
         self.logo_button.grid(row=0, column=1, columnspan=1, sticky='nsew')
 
+        ################################################
+        # ----------------ROW 1-------------------------
+        ################################################
+
         # New subject entry and button
         self.link_entry = ctk.CTkEntry(master=self,
                                        placeholder_text=LINK_ENTRY_TEXT,
-                                       width=600,
+                                       #width=600,
                                        height=50,
                                        border_width=2,
                                        corner_radius=10)
-        self.link_entry.grid(row=1, column=0, columnspan=2, sticky='e')
+        self.link_entry.grid(row=1, column=1, sticky='ew')
 
         self.add_sub_button = ctk.CTkButton(master=self,
                                             text='+',
@@ -147,12 +161,53 @@ class MainFrame(ctk.CTkFrame):
                                             fg_color=('purple', 'purple'))
         self.add_sub_button.grid(row=1, column=2, sticky='w', **padding)
 
+        ################################################
+        # ----------------ROW 2-------------------------
+        ################################################
+
+        # Campus link button
+        self.psi_icon = ctk.CTkImage(light_image=Image.open(PSI_ICON_PATH),
+                                     dark_image=Image.open(PSI_ICON_PATH),
+                                     size=(40, 40))
+        def go_to_campus():
+            webbrowser.open_new(CAMPUS_URL)
+        self.campus_link_button = ctk.CTkButton(master=self,
+                                                text='',
+                                                corner_radius=10,
+                                                image=self.psi_icon,
+                                                fg_color='transparent',
+                                                bg_color='transparent',
+                                                height=40,
+                                                width=40,
+                                                command=go_to_campus)
+        self.campus_link_button.grid(row=1, column=0, sticky='e', **padding)
+
         # Subject table
-        self.subject_table = CTkTable(master=self,
-                                      header_color='lightgreen',
-                                      font=('helvetica', 12, 'bold'),
-                                      values=[[SUB_TABLES_TEXT]])
-        self.subject_table.grid(row=2, column=1, sticky='ew')
+        self.subjects_table = CTkTable(master=self,
+                                       header_color='lightgreen',
+                                       font=('helvetica', 12, 'bold'),
+                                       values=[[SUB_TABLES_TEXT]])
+        self.subjects_table.grid(row=2, column=1, sticky='new')
+        for new_sub in self.subjects_list:
+            self.subjects_table.add_row([new_sub.name])
+
+        # Delete button
+        self.del_image = ctk.CTkImage(light_image=Image.open(DEL_ICON_PATH),
+                                       dark_image=Image.open(DEL_ICON_PATH),
+                                       size=(20, 20))
+        self.subject_del_button = ctk.CTkButton(master=self,
+                                                text='',
+                                                corner_radius=10,
+                                                image=self.del_image,
+                                                fg_color='transparent',
+                                                height=20,
+                                                width=20,
+                                                command=self.delete_subject)
+        self.subject_del_button.grid(row=2, column=2, sticky='nw', padx=5)
+
+        ################################################
+        # ----------------ROW 3-------------------------
+        ################################################
 
         # Combiner button
         self.button_combiner = ctk.CTkButton(master=self,
@@ -160,8 +215,12 @@ class MainFrame(ctk.CTkFrame):
                                              fg_color=('purple', 'purple'),
                                              text_color='white',
                                              font=('helvetica', 20, 'bold'),
-                                             command=self.button_combiner_action)
+                                             command=self.goto_combiner_action)
         self.button_combiner.grid(row=3, column=1, columnspan=1, sticky='ew')
+
+        ################################################
+        # ----------------ROW 4-------------------------
+        ################################################
 
         # Version string label
         self.version_str = ctk.CTkLabel(self, text=VER_STR)
@@ -193,6 +252,24 @@ class MainFrame(ctk.CTkFrame):
                                            fg_color='transparent')
         self.but_view_repo.grid(row=4, column=2)
 
+
+    def add_subject_action(self):
+        # html parse
+        new_url = self.link_entry.get()
+        new_sub = subject_parser.url_parse(new_url)
+        self.subjects_list.append(new_sub)
+
+        # clear entry and add to table
+        self.link_entry.delete(0, len(new_url))
+        self.subjects_table.add_row([new_sub.name])
+
+    def delete_subject(self):
+        try:
+            self.subjects_list.pop()
+            self.subjects_table.delete_row(len(self.subjects_list)+1)
+        except IndexError:
+            pass
+
     def mode_switch_action(self):
         light = self.mode_switch_var.get()
         if light:
@@ -202,13 +279,7 @@ class MainFrame(ctk.CTkFrame):
             ctk.set_appearance_mode("dark")
             self.mode_switch.configure(text=DARK_MODE_TEXT)
 
-    def add_subject_action(self):
-        new_url = self.link_entry.get()
-        new_sub = subject_parser.url_parse(new_url)
-        self.subjects_list.append(new_sub)
-        self.subject_table.add_row([new_sub.name])
-
-    def button_combiner_action(self):
+    def goto_combiner_action(self):
         self.master.current_frame = CombinerFrame(self.master, subjects=self.subjects_list)
 
 
@@ -218,6 +289,9 @@ class CombinerFrame(ctk.CTkFrame):
         self.master = master
         self.subjects = subjects
 
+        # go back button
+        self.go_back_button = GoBackButton(self)
+        self.go_back_button.pack(side=ctk.TOP, **padding)
         # Subjects found label
         self.choose_label = ctk.CTkLabel(master=self,
                                          text=CHOOSE_TEXT,
@@ -225,7 +299,7 @@ class CombinerFrame(ctk.CTkFrame):
                                          anchor='center',
                                          text_color=('black', 'white'))
         # self.frame_label.grid(row=0, column=0, sticky='ew', **padding)
-        self.choose_label.pack(fill=ctk.X, side=ctk.TOP, **padding)
+        self.choose_label.pack(side=ctk.TOP, **padding)
 
         # Comission selector
         self.selector_list = []
@@ -255,7 +329,6 @@ class CombinerFrame(ctk.CTkFrame):
         self.master.current_frame = DisplayCombFrame(self.master, self.subjects, combinations)
 
 
-
 class ComissionSelectorFrame(ctk.CTkScrollableFrame):
     def __init__(self, master, subject:combiner.Subject, **kwargs):
         super().__init__(master, **kwargs)
@@ -277,7 +350,7 @@ class ComissionSelectorFrame(ctk.CTkScrollableFrame):
         self.row_counter += 1
 
         # select all radio buttons
-        self.radio_var = ctk.BooleanVar(value=True)
+        self.radio_var = ctk.BooleanVar(value=False)
         self.sel_all_radio = ctk.CTkRadioButton(master=self,
                                                 text=SEL_ALL_TEXT,
                                                 variable=self.radio_var,
@@ -299,6 +372,8 @@ class ComissionSelectorFrame(ctk.CTkScrollableFrame):
         self.comission_labels = []
         for comission in subject.comission_list:
             self.add_comission_checkbox(comission)
+
+        self.desel_radio_action()
 
     def add_comission_checkbox(self, comission):
         # label for each comission
@@ -342,9 +417,10 @@ class ComissionCheckbox(ctk.CTkCheckBox):
             self.comission.deselect()
 
 
-class DisplayCombFrame(ctk.CTkFrame):
-    def __init__(self, master, subjects: List[combiner.Subject], combinations: List[combiner.Combination], **kwargs):
+class DisplayCombFrame(ctk.CTkScrollableFrame):
+    def __init__(self, master: MainWindow, subjects: List[combiner.Subject], combinations: List[combiner.Combination], **kwargs):
         super().__init__(master, **kwargs)
+        self.master = master
         self.subjects = subjects
         self.combinations = combinations
 
@@ -402,7 +478,29 @@ class DisplayCombFrame(ctk.CTkFrame):
 
 
     def go_back_to_combiner(self):
-        self.master.current_frame = CombinerFrame(self.master)
+        self.master.current_frame = CombinerFrame(self.master, self.subjects)
+
+
+class GoBackButton(ctk.CTkButton):
+    def __init__(self, master: DisplayCombFrame | CombinerFrame, **kwargs):
+        super().__init__(master, **kwargs)
+        self.master = master
+        self.configure(text='<',
+                        command=self.go_back,
+                        width=15,
+                        height=15,
+                        corner_radius=15,
+                        fg_color='purple')
+
+    def go_back(self):
+        direct_master = self.master
+        subjects = direct_master.subjects
+        if isinstance(direct_master, DisplayCombFrame):
+            direct_master.master.current_frame = CombinerFrame(direct_master.master, subjects)
+        elif isinstance(direct_master, CombinerFrame):
+            direct_master.master.current_frame = MainFrame(direct_master.master, subjects)
+        else:
+            raise ValueError('Misplaced go back button')
 
 
 

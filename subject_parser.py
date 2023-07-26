@@ -153,22 +153,38 @@ def url_parse(url: str) -> Subject:
     """
     Retrieves the information from a URL, and returns the parsed subject
     """
+    # read all html tables on the webpage as dataframes
     dfs = pd.read_html(url)
+    if not len(dfs):
+        raise ValueError('Invalid URL: no tables found at all')
+
+    # first df holds the subject name in the format ( <number> - <name> )
     title_df = dfs.pop(0)
-    while len(dfs) > 2:
-        dfs.pop(len(dfs)-1)
-    raw_name = str(title_df.iloc[0,0])
+    raw_name = title_df.iloc[0,0]
     match = re.search(r'\(\s\d+\s-(.*?)\)', raw_name)
     if match:
         name = match.group(1)
     else:
-        name = ''
-    teo_df = dfs.pop(0)
-    if len(dfs) > 1:
-        sem_df = dfs.pop(0)
-    else:
+        raise ValueError('Invalid URL: no subject name found')
+
+    # find other dfs
+    df_dict = {}
+    for df in dfs:
+        key = df.columns[0]
+        df_dict[key] = df
+
+    try:
+        teo_df = df_dict['Teóricos']
+        com_df = df_dict['Comisiones']
+    except KeyError:
+        raise ValueError('Invalid URL: obligatory tables not found')
+
+    # seminaries are optional
+    try:
+        sem_df = df_dict['Seminarios']
+    except KeyError:
         sem_df = None
-    com_df = dfs.pop(0)
+
     return dfs_to_subject(name, teo_df, com_df, sem_df)
 
 
@@ -181,7 +197,7 @@ def test():
     # return  subjects, combinations
 
     # url parse test
-    sub = url_parse("http://academica.psi.uba.ar/Psi/Ver154_.php?catedra=51")
+    sub = url_parse("http://academica.psi.uba.ar/Psi/Ver154_.php?catedra=56")
     print(sub)
 
 
