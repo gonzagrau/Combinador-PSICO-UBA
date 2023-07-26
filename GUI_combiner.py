@@ -5,8 +5,6 @@ import combiner
 import scheduler
 import subject_parser
 from typing import List
-import openpyxl as xl
-from tkinter import ttk
 from CTkTable import CTkTable
 import subprocess, os, platform
 
@@ -31,13 +29,16 @@ REP_URL = r'https://github.com/gonzagrau/Combinador-PSICO-UBA'
 OUTPUT_PATH = "outputs/combinations.xlsx"
 
 # STRING CONSTANTS
+LINK_ENTRY_TEXT = 'Ingrese el link de la materia a agregar'
+ADD_SUB_TEXT = 'Agregar materia'
+SUB_TABLES_TEXT = 'Materias elegidas'
 REP_TEXT = 'Ver en GitHub'
 TITLE = 'PsiComb'
 VER_STR = 'Ver. 1.0'
 LIGHT_MODE_TEXT = 'Modo dia'
 DARK_MODE_TEXT = 'Modo noche'
 CHOOSE_TEXT = 'Elija sus comisiones para cada materia'
-WELCOME_TEXT = 'Combinador de horarios \n Psicología UBA'
+GO_TO_SELECTOR_TEXT = 'Ir al selector de comisiones'
 COMBINE_BUTTON_TEXT = 'Calcular combinaciones'
 SEL_ALL_TEXT = 'Seleccionar todas'
 DESEL_ALL_TEXT = 'Deseleccionar todas'
@@ -103,12 +104,18 @@ class MainFrame(ctk.CTkFrame):
         super().__init__(master, **kwargs)
         self.master = master
 
-        self.rowconfigure(0, weight=10)
-        self.rowconfigure(1, weight=10)
-        self.rowconfigure(2, weight=1)
+        # Grid configure
+        self.rowconfigure(0, weight=5)
+        self.rowconfigure(1, weight=5)
+        self.rowconfigure(2, weight=10)
+        self.rowconfigure(3, weight=5)
+        self.rowconfigure(4, weight=1)
         self.columnconfigure(0, weight=1)
         self.columnconfigure(1, weight=1)
         self.columnconfigure(2, weight=1)
+
+        # Inputted subjects
+        self.subjects_list = []
 
         # Logo image
         self.logo_image = ctk.CTkImage(light_image=Image.open(LOGO_PATH),
@@ -122,18 +129,43 @@ class MainFrame(ctk.CTkFrame):
                                          hover=False)
         self.logo_button.grid(row=0, column=1, columnspan=1, sticky='nsew')
 
+        # New subject entry and button
+        self.link_entry = ctk.CTkEntry(master=self,
+                                       placeholder_text=LINK_ENTRY_TEXT,
+                                       width=600,
+                                       height=50,
+                                       border_width=2,
+                                       corner_radius=10)
+        self.link_entry.grid(row=1, column=0, columnspan=2, sticky='e')
+
+        self.add_sub_button = ctk.CTkButton(master=self,
+                                            text='+',
+                                            font=('arial', 24, 'bold'),
+                                            width=50,
+                                            height=50,
+                                            command=self.add_subject_action,
+                                            fg_color=('purple', 'purple'))
+        self.add_sub_button.grid(row=1, column=2, sticky='w', **padding)
+
+        # Subject table
+        self.subject_table = CTkTable(master=self,
+                                      header_color='lightgreen',
+                                      font=('helvetica', 12, 'bold'),
+                                      values=[[SUB_TABLES_TEXT]])
+        self.subject_table.grid(row=2, column=1, sticky='ew')
+
         # Combiner button
         self.button_combiner = ctk.CTkButton(master=self,
-                                             text=WELCOME_TEXT,
+                                             text=GO_TO_SELECTOR_TEXT,
                                              fg_color=('purple', 'purple'),
                                              text_color='white',
-                                             font=('courier', 20, 'bold'),
+                                             font=('helvetica', 20, 'bold'),
                                              command=self.button_combiner_action)
-        self.button_combiner.grid(row=1, column=1, columnspan=1, sticky='ew')
+        self.button_combiner.grid(row=3, column=1, columnspan=1, sticky='ew')
 
         # Version string label
         self.version_str = ctk.CTkLabel(self, text=VER_STR)
-        self.version_str.grid(row=2, column=0, sticky='ew')
+        self.version_str.grid(row=4, column=0, sticky='ew')
 
         # Switch mode button
         self.mode_switch_var = ctk.BooleanVar(self, True)
@@ -148,7 +180,7 @@ class MainFrame(ctk.CTkFrame):
         else:
             self.mode_switch.select()
             self.mode_switch.configure(text=LIGHT_MODE_TEXT)
-        self.mode_switch.grid(row=2, column=1)
+        self.mode_switch.grid(row=4, column=1)
 
         # View repository button
         def go_to_repo():
@@ -159,7 +191,7 @@ class MainFrame(ctk.CTkFrame):
                                            text_color=('black', 'white'),
                                            command=go_to_repo,
                                            fg_color='transparent')
-        self.but_view_repo.grid(row=2, column=2)
+        self.but_view_repo.grid(row=4, column=2)
 
     def mode_switch_action(self):
         light = self.mode_switch_var.get()
@@ -170,15 +202,21 @@ class MainFrame(ctk.CTkFrame):
             ctk.set_appearance_mode("dark")
             self.mode_switch.configure(text=DARK_MODE_TEXT)
 
+    def add_subject_action(self):
+        new_url = self.link_entry.get()
+        new_sub = subject_parser.url_parse(new_url)
+        self.subjects_list.append(new_sub)
+        self.subject_table.add_row([new_sub.name])
+
     def button_combiner_action(self):
-        self.master.current_frame = CombinerFrame(self.master)
+        self.master.current_frame = CombinerFrame(self.master, subjects=self.subjects_list)
 
 
 class CombinerFrame(ctk.CTkFrame):
-    def __init__(self, master: MainWindow, **kwargs):
+    def __init__(self, master: MainWindow, subjects: List[combiner.Subject], **kwargs):
         super().__init__(master, **kwargs)
         self.master = master
-        self.subjects = subject_parser.parse_all_subjects(SUBJECT_DIR)
+        self.subjects = subjects
 
         # Subjects found label
         self.choose_label = ctk.CTkLabel(master=self,
