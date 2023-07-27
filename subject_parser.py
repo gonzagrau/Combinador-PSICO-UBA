@@ -1,26 +1,25 @@
 import pandas as pd
 from typing import Tuple
 import os
-from combiner import *
+from datetime import time
+import combiner
 import re
+from typing import List
 
 
 # setup pandas display options
 pd.set_option('display.width', 400)
 pd.set_option("display.max_columns", 10)
 
-ROMAN_CONSTANTS = ("I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "XI", "XII", "XII", "XIV" )
+ROMAN_CONSTANTS = ("I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "XI", "XII", "XII", "XIV", "XV" )
 
 def is_roman_number(num: str):
     """
     checks whether a str is a (small) roman numeral
     """
-    pattern = re.compile(r"(IX|IV|V?I{0,3})?$", re.VERBOSE)
+    pattern = re.compile(r"^(X{0,3})(IX|IV|V?I{0,3})$", re.VERBOSE)
+    return bool(re.match(pattern, num))
 
-    if re.match(pattern, num):
-        return True
-
-    return False
 
 def str_to_time_tuple(time_str: str) -> Tuple[int, int]:
     """
@@ -38,6 +37,7 @@ def str_to_time_tuple(time_str: str) -> Tuple[int, int]:
     assert mm // 60 == 0 and mm >= 0, f'minute must be in range(60), got minute == {mm}'
 
     return hh, mm
+
 
 def parse_course_blocks(df: pd.DataFrame) -> dict:
     """
@@ -59,16 +59,18 @@ def parse_course_blocks(df: pd.DataFrame) -> dict:
             observation = ''
         else:
             observation = '\n'.join(re.split(r'[.\-]', observation))
-        new_cb = CourseBlock(weekday, start_time, end_time, teacher, observation)
+        new_cb = combiner.CourseBlock(weekday, start_time, end_time, teacher, observation)
         cb_dict[identifyer] = new_cb
 
     return cb_dict
-def dfs_to_subject(name: str, teo_df: pd.DataFrame, com_df: pd.DataFrame, sem_df: pd.DataFrame = None) -> Subject:
+
+
+def dfs_to_subject(name: str, teo_df: pd.DataFrame, com_df: pd.DataFrame, sem_df: pd.DataFrame = None) -> combiner.Subject:
     """
     This function parses the information from the format given in the website
     to the internal representation of this project using Subject objects
     """
-    subject = Subject(name)
+    subject = combiner.Subject(name)
 
     # get course blocks from dataframes
     teo_cb_dict = parse_course_blocks(teo_df)
@@ -81,7 +83,7 @@ def dfs_to_subject(name: str, teo_df: pd.DataFrame, com_df: pd.DataFrame, sem_df
     # build actual comissions
     for index, row in com_df.iterrows():
         identifyer = str(row['Comisiones']).strip()
-        new_com = Comission(identifyer)
+        new_com = combiner.Comission(identifyer)
 
         # add course blocks
         keys = [x.strip() for x in row['Oblig.'].strip().split(' - ')]
@@ -105,51 +107,7 @@ def dfs_to_subject(name: str, teo_df: pd.DataFrame, com_df: pd.DataFrame, sem_df
     return subject
 
 
-def xlsx_to_subject(filepath: str) -> Subject:
-    """
-    This function parses the information given in an Excel file to
-    Subject objects. The .xlsx is assumed to have either two or three
-    sheets: TEO (theory classes), SEM (seminaries, optional), and COM
-    (practical classes, which determine the actual comissions)
-    """
-
-    # Get name
-    sub_name = os.path.basename(filepath).strip('.xlsx')
-
-    # Get dataframes
-    try:
-        teo_df = pd.read_excel(filepath, sheet_name='TEO')
-        teo_df = teo_df.rename(str.strip, axis = 'columns')
-        com_df = pd.read_excel(filepath, sheet_name='COM')
-        com_df = com_df.rename(str.strip, axis = 'columns')
-    except ValueError:
-        raise ValueError('Invalid .xlsx file, either TEO or COM not found')
-
-    try:
-        sem_df = pd.read_excel(filepath, sheet_name='SEM')
-        sem_df = sem_df.rename(columns=lambda x: x.strip())
-    except ValueError:
-        # if there are no seminaries for a given subject, sem_df is None
-        sem_df = None
-
-    return dfs_to_subject(sub_name, teo_df, com_df, sem_df)
-
-
-def parse_directory(directory: str) -> List[Subject]:
-    """
-    parses all subjects from a giver directory
-    """
-    subjects = []
-    for filename in os.listdir(directory):
-        _, file_extension = os.path.splitext(filename)
-        f = os.path.join(directory, filename)
-        # checking if it is a valid file
-        if os.path.isfile(f) and file_extension == '.xlsx':
-            sub = xlsx_to_subject(f)
-            subjects.append(sub)
-    return subjects
-
-def url_parse(url: str) -> Subject:
+def url_parse(url: str) -> combiner.Subject:
     """
     Retrieves the information from a URL, and returns the parsed subject
     """
@@ -164,6 +122,12 @@ def url_parse(url: str) -> Subject:
     match = re.search(r'\(\s\d+\s-(.*?)\)', raw_name)
     if match:
         name = match.group(1)
+        if len(name) > 30:
+            # adjust name lenght
+            words = name.split(' ')
+            start_words = words[:len(words)//2]
+            end_words = words[len(words)//2:]
+            name = ' '.join(start_words) + '\n' + ' '.join(end_words)
     else:
         raise ValueError('Invalid URL: no subject name found')
 
@@ -189,16 +153,13 @@ def url_parse(url: str) -> Subject:
 
 
 def test():
-    # directory parse test
-    # subjects = parse_directory('subjects')
-    # combinations = find_combinations(subjects)
-    # for sub in subjects:
-    #     print(sub)
-    # return  subjects, combinations
-
     # url parse test
-    sub = url_parse("http://academica.psi.uba.ar/Psi/Ver154_.php?catedra=56")
-    print(sub)
+    base_url = "http://academica.psi.uba.ar/Psi/Ver154_.php?catedra="
+    dfs = pd.read_html("http://academica.psi.uba.ar/Psi/Ope154_.php")
+    catedras_df = dfs[2]
+    for index, row in catedras_df.head(20).iterrows():
+        subject = url_parse(f"{base_url}{row[0]}")
+        print(subject)
 
 
 if __name__ == '__main__':

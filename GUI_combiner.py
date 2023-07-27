@@ -29,7 +29,7 @@ PSI_ICON_PATH = r'./assets/images/psi_rojo_30x30.png'
 DEL_ICON_PATH = r'./assets/images/delete_icon.png'
 REP_URL = r'https://github.com/gonzagrau/Combinador-PSICO-UBA'
 CAMPUS_URL = r'http://academica.psi.uba.ar/index.php'
-OUTPUT_PATH = "outputs/combinations.xlsx"
+OUTPUT_PATH = r"combinations.xlsx"
 
 # STRING CONSTANTS
 LINK_ENTRY_TEXT = 'Ingrese el link de la materia a agregar'
@@ -37,7 +37,7 @@ ADD_SUB_TEXT = 'Agregar materia'
 SUB_TABLES_TEXT = 'Materias elegidas'
 REP_TEXT = 'Ver en GitHub'
 TITLE = 'PsiComb'
-VER_STR = 'Ver. 1.0'
+VER_STR = 'Ver. 1.1'
 LIGHT_MODE_TEXT = 'Modo dia'
 DARK_MODE_TEXT = 'Modo noche'
 CHOOSE_TEXT = 'Elija sus comisiones para cada materia'
@@ -45,7 +45,7 @@ GO_TO_SELECTOR_TEXT = 'Ir al selector de comisiones'
 COMBINE_BUTTON_TEXT = 'Calcular combinaciones'
 SEL_ALL_TEXT = 'Seleccionar todas'
 DESEL_ALL_TEXT = 'Deseleccionar todas'
-LAUNCH_TEXT = 'Ver horarios en Excel'
+LAUNCH_TEXT = 'Ver horarios completos en Excel'
 
 # Shortcut for fast padding
 padding = dict(padx=5, pady=5)
@@ -423,6 +423,11 @@ class DisplayCombFrame(ctk.CTkScrollableFrame):
         self.master = master
         self.subjects = subjects
         self.combinations = combinations
+        self.schedules = []
+        for combination in self.combinations:
+            new_sched = scheduler.Schedule(freq='60T')
+            new_sched.add_combination(self.subjects, combination)
+            self.schedules.append(new_sched)
 
         # grid configuration
         self.rowconfigure(0, weight=1)
@@ -455,14 +460,9 @@ class DisplayCombFrame(ctk.CTkScrollableFrame):
                                              anchor='center')
         self.comb_found_label.grid(row=0, column=1)
 
-        # table
-        table_values = [[subject.name for subject in self.subjects]]
-        for comb in self.combinations:
-            table_values.append([com.identifyer for com in comb])
-        self.table = CTkTable(master=self,
-                              header_color='lightgreen',
-                              values=table_values)
-        self.table.grid(row=1, column=0, columnspan=2, padx=20, pady=20)
+        # Schedule tabview
+        self.schedules_tabs = ScheduleTabView(self, self.schedules)
+        self.schedules_tabs.grid(row=1, column=0, columnspan=2, padx=20, pady=20)
 
         # launch excel file
         def launch_action():
@@ -503,6 +503,37 @@ class GoBackButton(ctk.CTkButton):
             raise ValueError('Misplaced go back button')
 
 
+class CTkSchedule(CTkTable):
+    def __init__(self, master, schedule : scheduler.Schedule, **kwargs):
+        headers = ['HORA'] + [i for i in schedule.columns]
+        table_values = [headers] + schedule.reset_index().values.tolist()
+        super().__init__(master, header_color='lightgreen', values=table_values, **kwargs)
+        self.schedule = schedule
+        self.apply_format()
+
+    def apply_format(self):
+        # index column
+        for i in range(len(self.values)):
+            self.frame[i, 0].configure(fg_color='lightgreen')
+
+        # inner values
+        default_colors = [self.fg_color, self.fg_color2]
+        for i in range(1, len(self.values)):
+            for j in range(1, len(self.values[0])):
+                value = self.values[i][j]
+                color = self.schedule.color_dict.get(value, default_colors[i%2]) # default color defined by phase
+                self.frame[i, j].configure(fg_color=color)
+
+
+class ScheduleTabView(ctk.CTkTabview):
+    def __init__(self, master, schedules: List[scheduler.Schedule], **kwargs):
+        super().__init__(master, **kwargs)
+        self.schedules = schedules
+        for index, schedule in enumerate(schedules):
+            new_name = f"Comb. {index + 1}"
+            self.add(new_name)
+            new_sched = CTkSchedule(master=self.tab(new_name), schedule=schedule)
+            new_sched.grid(row=0, column=0, sticky='nsew')
 
 def main():
     root = MainWindow()

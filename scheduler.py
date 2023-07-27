@@ -1,19 +1,19 @@
 import pandas as pd
-from combiner import *
+import combiner
 from typing import List
 import matplotlib.colors as mcolors
 import random
 
 class Schedule(pd.DataFrame):
     # generate this time series only once, since it's shared by all instances
-    time_series = pd.date_range(start='07:00', end='22:00', freq='15T').time
     color_dict = {}
     colors_list = list(mcolors.TABLEAU_COLORS.values())
-    def __init__(self):
-        super().__init__('', index=Schedule.time_series, columns= list(weekdays_list))
+    def __init__(self, freq : str='15T'):
+        time_series = pd.date_range(start='07:00', end='22:00', freq=freq).time
+        super().__init__('', index=time_series, columns= list(combiner.weekdays_list))
 
 
-    def add_course_block(self, course_block: CourseBlock, repr_str: str) -> None:
+    def add_course_block(self, course_block: combiner.CourseBlock, repr_str: str) -> None:
         self.loc[course_block.start_time : course_block.end_time, course_block.weekday].iloc[:-1] = repr_str
         if repr_str not in self.color_dict.keys():
             if len(self.colors_list) == 0: # reset colors if we run out of them
@@ -22,7 +22,7 @@ class Schedule(pd.DataFrame):
             self.colors_list.remove(chosen_color)
             self.color_dict[repr_str] = chosen_color
 
-    def add_combination(self, subjects: List[Subject], combination: Combination) -> None:
+    def add_combination(self, subjects: List[combiner.Subject], combination: combiner.Combination) -> None:
         for subject, comission in zip(subjects, combination):
             sub_name = subject.name
             for block in comission.block_list:
@@ -38,7 +38,7 @@ class Schedule(pd.DataFrame):
 
 
 
-def save_to_excel(subjects: List[Subject], combinations: List[Combination], filepath: str):
+def save_to_excel(subjects: List[combiner.Subject], combinations: List[combiner.Combination], filepath: str):
     """
     This function saves a list of combinations to a single Excel file
     """
@@ -67,8 +67,8 @@ def test_scheduler():
     will be used as an example
     """
 
-    subjects, combinations = test_combiner()
-    save_to_excel(subjects, combinations, 'output_excels/combinations.xlsx')
+    subjects, combinations = combiner.test_combiner()
+    save_to_excel(subjects, combinations, 'combinations.xlsx')
 
 
 if __name__ == '__main__':
