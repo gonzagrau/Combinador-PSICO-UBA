@@ -9,9 +9,8 @@ class Schedule(pd.DataFrame):
     color_dict = {}
     colors_list = list(mcolors.TABLEAU_COLORS.values())
     def __init__(self, freq : str='15T'):
-        time_series = pd.date_range(start='07:00', end='22:00', freq=freq).time
+        time_series = pd.date_range(start='07:00', end='23:00', freq=freq).time
         super().__init__('', index=time_series, columns= list(combiner.weekdays_list))
-
 
     def add_course_block(self, course_block: combiner.CourseBlock, repr_str: str) -> None:
         self.loc[course_block.start_time : course_block.end_time, course_block.weekday].iloc[:-1] = repr_str

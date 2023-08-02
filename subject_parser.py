@@ -6,7 +6,6 @@ import combiner
 import re
 from typing import List
 
-
 # setup pandas display options
 pd.set_option('display.width', 400)
 pd.set_option("display.max_columns", 10)
@@ -127,7 +126,7 @@ def url_parse(url: str) -> combiner.Subject:
             words = name.split(' ')
             start_words = words[:len(words)//2]
             end_words = words[len(words)//2:]
-            name = ' '.join(start_words) + '\n' + ' '.join(end_words)
+            name = ' '.join(start_words) + ' \n' + ' '.join(end_words)
     else:
         raise ValueError('Invalid URL: no subject name found')
 
