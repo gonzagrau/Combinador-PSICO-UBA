@@ -1,4 +1,4 @@
-# PsiComb: An class schedule maker for the UBA Faculty of Psychology
+# PsiComb: A class schedule maker for the UBA Faculty of Psychology
 When your school has a large collection of class sections for every subject, and you plan to take more than one subject every semester, finding a valid non-overlapping combination of section for every subject can be a struggle. Besides, the course information available online may be messy, which makes this process even harder. Enter: PsiComb, an automatic class scheduler that finds every possible section combination for the subjects of your choice.
 
 ## Step-by-step guide
